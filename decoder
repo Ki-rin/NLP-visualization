@@ -1,0 +1,79 @@
+import torch
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
+import matplotlib.pyplot as plt
+
+# Load pretrained model and tokenizer
+model_name = 'gpt2'
+model = GPT2LMHeadModel.from_pretrained(model_name)
+tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+
+def generate_text(prompt):
+    input_ids = tokenizer.encode(prompt, return_tensors='pt')
+
+    with torch.no_grad():
+        output = model.generate(input_ids, max_length=100, num_return_sequences=1)
+    generated_text = tokenizer.decode(output[0], skip_special_tokens=True)
+
+    return generated_text
+
+def get_token_probabilities(prompt):
+    input_ids = tokenizer.encode(prompt, return_tensors='pt')
+
+    with torch.no_grad():
+        logits = model(input_ids).logits
+    probabilities = torch.softmax(logits, dim=-1)
+    
+    return probabilities
+
+def calculate_entropy(token_probs):
+    entropy = -torch.sum(token_probs * torch.log2(token_probs), dim=-1)
+    return entropy.tolist()
+
+def visualize_probability_distribution(prompt, probabilities):
+    tokens = tokenizer.encode(prompt, return_tensors='pt')[0]
+    
+    plt.figure(figsize=(12, 6))
+    
+    for i, token_probabilities in enumerate(probabilities):
+        token = tokenizer.decode(tokens[i])
+        token_colors = plt.cm.viridis(token_probabilities)  # Map probabilities to colors
+        plt.bar(range(len(token_probabilities)), token_probabilities, color=token_colors)
+        plt.xlabel(f'Token {i + 1} ({token})')
+        plt.ylabel('Probability')
+        plt.title(f'Probability Distribution for Token {i + 1}')
+        plt.xticks(range(len(token_probabilities)), [str(i) for i in range(len(token_probabilities))])
+        
+        for idx, prob in enumerate(token_probabilities):
+            plt.text(idx, prob, f'{prob:.2f}', ha='center', va='bottom', fontsize=8)
+        
+        plt.show()
+
+def main():
+    while True:
+        prompt_text = input("\nEnter a prompt text (or 'exit' to quit): ")
+        if prompt_text.lower() == 'exit':
+            break
+        
+        generated_text = generate_text(prompt_text)
+        probabilities = get_token_probabilities(prompt_text)
+        entropy = calculate_entropy(probabilities)
+
+        print("\nGenerated Text:")
+        print(generated_text)
+        
+        print("\nToken Probability Distributions:")
+        for i, token_probabilities in enumerate(probabilities):
+            token = tokenizer.decode(tokenizer.encode(prompt_text)[0, i])
+            print(f"Token {i + 1} ({token}):")
+            for idx, prob in enumerate(token_probabilities):
+                print(f"   Position {idx}: {prob.item():.4f}")
+        
+        print(f'\nEntropies for Each Token:')
+        for i, ent in enumerate(entropy):
+            print(f"Token {i + 1}: {ent:.4f}")
+
+        # Visualize probability distributions with colors
+        visualize_probability_distribution(prompt_text, probabilities)
+
+if __name__ == "__main__":
+    main()
