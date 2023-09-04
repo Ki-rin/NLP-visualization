@@ -1,0 +1,76 @@
+# Import necessary libraries
+from sentence_transformers import SentenceTransformer
+import matplotlib.pyplot as plt
+import numpy as np
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+# Load a pre-trained sentence transformer model (you can choose one)
+model_name = "paraphrase-MiniLM-L6-v2"
+model = SentenceTransformer(model_name)
+
+# Define a list of Instagram or girly-anime style sentences about cats
+sentences = [
+    "Just chilling with my fur baby. 😻 #CaturdayVibes",
+    "When your cat's cuteness level is over 9000! 💖✨",
+    "Cat cuddles and a cup of tea make the purrfect evening. ☕😺",
+    "My cat's sass level: Expert! 💁‍♀️😼",
+    "In a world full of humans, be a cat. 🐾💕",
+]
+
+# Compute sentence embeddings
+sentence_embeddings = model.encode(sentences, show_progress_bar=True)
+
+# Create a figure and axis with tooltips
+fig, ax = plt.subplots(figsize=(12, 8))
+
+# Create a wider color map for sentence highlighting
+color_map = plt.get_cmap("plasma")
+
+# Plot sentence embeddings as vectors with custom styling and tooltips
+for i, sentence in enumerate(sentences):
+    embedding = sentence_embeddings[i]
+    color = color_map(i / len(sentences))  # Custom color
+    plt.quiver(
+        0, 0, embedding[0], embedding[1], angles='xy', scale_units='xy', scale=2,
+        color=color, label=sentence, width=0.015, alpha=0.7, edgecolor='k'
+    )
+
+    # Add tooltips
+    tooltip = plt.gca().text(embedding[0], embedding[1], sentence, fontsize=12, color='black')
+    tooltip.set_visible(False)
+
+    def hover(event, tooltip=tooltip):
+        if event.inaxes == plt.gca():
+            contains, _ = tooltip.contains(event)
+            if contains:
+                tooltip.set_visible(True)
+                fig.canvas.draw_idle()
+            else:
+                tooltip.set_visible(False)
+                fig.canvas.draw_idle()
+
+    fig.canvas.mpl_connect("motion_notify_event", hover)
+
+# Add a legend on the side
+ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=12)
+
+# Add labels for x and y axes
+ax.set_xlabel("Dimension 1", fontsize=14)
+ax.set_ylabel("Dimension 2", fontsize=14)
+
+# Set title
+ax.set_title("Sentence Embeddings as Vectors (Cat Instagram Style)", fontsize=16)
+
+# Adjust the plot limits for better visibility
+ax.set_xlim(-3, 3)
+ax.set_ylim(-3, 3)
+
+# Add a grid
+ax.grid(linestyle='--', alpha=0.5)
+
+# Customize ticks and labels
+ax.tick_params(axis='both', which='both', labelsize=12)
+
+# Show the plot
+plt.tight_layout()
+plt.show()
